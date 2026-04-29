@@ -28,6 +28,7 @@ class ChatParticipantSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "chat",
+            "subject",
             "display_name",
             "phone_number",
             "wa_id",

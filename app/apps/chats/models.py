@@ -1,5 +1,7 @@
 from django.db import models
 
+from apps.subjects.models import Subject
+
 
 class ChatThread(models.Model):
     """Represents a WhatsApp conversation thread (group or direct chat)."""
@@ -50,6 +52,13 @@ class ChatParticipant(models.Model):
         ChatThread,
         on_delete=models.CASCADE,
         related_name="participants",
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="chat_participations",
     )
     display_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=30, blank=True)

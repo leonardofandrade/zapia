@@ -12,6 +12,8 @@ from zipfile import ZipFile
 from django.db import transaction
 from django.utils import timezone
 
+from apps.subjects.models import Subject
+
 from .models import ChatAttachment, ChatImport, ChatMessage, ChatParticipant, ChatThread
 
 MESSAGE_LINE_RE = re.compile(
@@ -19,6 +21,7 @@ MESSAGE_LINE_RE = re.compile(
 )
 AUTHOR_MESSAGE_RE = re.compile(r"^(?P<author>[^:]+): (?P<content>.*)$")
 ATTACHMENT_PLACEHOLDER_RE = re.compile(r"^(?P<file_name>.+) \(arquivo anexado\)$")
+PHONE_RE = re.compile(r"^\+?\d[\d\s\-()]{7,}$")
 
 
 @dataclass(frozen=True)
@@ -38,6 +41,27 @@ def _sha256(value: bytes) -> str:
 
 def _normalized(value: str) -> str:
     return " ".join(value.strip().lower().split())
+
+
+def _digits_only(value: str) -> str:
+    return "".join(ch for ch in value if ch.isdigit())
+
+
+def _extract_sender_identity(sender_name: str) -> tuple[str, str, str]:
+    clean_name = sender_name.strip()
+    if PHONE_RE.match(clean_name):
+        phone_digits = _digits_only(clean_name)
+        return clean_name, clean_name, phone_digits
+    return clean_name, "", ""
+
+
+def _build_subject_tax_id(*, display_name: str, phone_number: str, wa_id: str) -> str:
+    if wa_id:
+        return f"WAID:{wa_id}"
+    if phone_number:
+        return f"PHONE:{_digits_only(phone_number)}"
+    sender_hash = _sha256(_normalized(display_name).encode("utf-8"))[:20]
+    return f"CHAT:{sender_hash}"
 
 
 def build_thread_fingerprint(title: str, is_group: bool) -> str:
@@ -180,13 +204,37 @@ def import_whatsapp_chat_zip(zip_path: str | Path) -> ChatImport:
                 sender = None
                 sender_key = "system"
                 if parsed.sender_name:
-                    sender_key = _normalized(parsed.sender_name)
+                    display_name, phone_number, wa_id = _extract_sender_identity(
+                        parsed.sender_name
+                    )
+                    sender_key = _normalized(f"{display_name}|{phone_number}|{wa_id}")
                     sender = participants_cache.get(sender_key)
                     if sender is None:
+                        subject_tax_id = _build_subject_tax_id(
+                            display_name=display_name,
+                            phone_number=phone_number,
+                            wa_id=wa_id,
+                        )
+                        subject_defaults = {"full_name": display_name}
+                        if display_name != phone_number and phone_number:
+                            subject_defaults["alias"] = phone_number
+                        subject, _ = Subject.objects.get_or_create(
+                            tax_id=subject_tax_id,
+                            defaults=subject_defaults,
+                        )
                         sender, _ = ChatParticipant.objects.get_or_create(
                             chat=chat,
-                            display_name=parsed.sender_name,
+                            display_name=display_name,
+                            phone_number=phone_number,
+                            defaults={
+                                "wa_id": wa_id,
+                                "subject": subject,
+                            },
                         )
+                        if sender.subject_id is None:
+                            sender.subject = subject
+                            sender.wa_id = sender.wa_id or wa_id
+                            sender.save(update_fields=["subject", "wa_id"])
                         participants_cache[sender_key] = sender
 
                 message_fingerprint = build_message_fingerprint(
