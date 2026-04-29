@@ -27,13 +27,24 @@
                 {% if message.sender %}{{ message.sender.display_name }}{% else %}Sistema{% endif %}
                 - {{ message.sent_at|default:message.raw_timestamp }}
             </div>
-            <div>{{ message.content|linebreaksbr }}</div>
+            {% with content_text=message.content|default:"" %}
+                {% if message.attachments.all %}
+                    {% if content_text != "<Mídia oculta>" and content_text|slice:":15" != "<Mídia oculta>\n" %}
+                        <div>{{ content_text|linebreaksbr }}</div>
+                    {% endif %}
+                {% else %}
+                    <div>{{ content_text|linebreaksbr }}</div>
+                {% endif %}
+            {% endwith %}
             {% if message.attachments.all %}
                 {% for attachment in message.attachments.all %}
                     <div class="attachment">
                         📎 {{ attachment.file_name }}
                         <a href="/api/chats/attachments/{{ attachment.id }}/content/" target="_blank">abrir</a>
                     </div>
+                    {% if attachment.caption %}
+                        <div class="meta">{{ attachment.caption|linebreaksbr }}</div>
+                    {% endif %}
                     {% if attachment.mime_type|slice:":6" == "image/" or attachment.file_extension == "jpg" or attachment.file_extension == "jpeg" or attachment.file_extension == "png" or attachment.file_extension == "gif" or attachment.file_extension == "webp" %}
                         <a href="/api/chats/attachments/{{ attachment.id }}/content/" target="_blank">
                             <img
