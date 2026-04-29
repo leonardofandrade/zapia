@@ -19,20 +19,20 @@ def link_subjects(
     description: str,
 ) -> Relationship:
     if from_id == to_id:
-        raise ValueError("Um subject nao pode se vincular a si mesmo.")
+        raise ValueError("A subject cannot be linked to itself.")
     if not isinstance(description, str):
-        raise ValueError("Descricao do vinculo deve ser uma string.")
+        raise ValueError("Relationship description must be a string.")
     normalized_description = description.strip()
     if not normalized_description:
-        raise ValueError("Descricao do vinculo nao pode estar vazia.")
+        raise ValueError("Relationship description cannot be empty.")
 
     from_subject = Subject.objects.get(pk=from_id)
     to_subject = Subject.objects.get(pk=to_id)
     return Relationship.objects.create(
         from_subject=from_subject,
         to_subject=to_subject,
-        tipo=rel_type,
-        forca=strength,
+        relationship_type=rel_type,
+        strength=strength,
     )
 
 
