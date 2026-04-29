@@ -6,6 +6,7 @@ class ChatThread(models.Model):
 
     title = models.CharField(max_length=255)
     is_group = models.BooleanField(default=True)
+    thread_fingerprint = models.CharField(max_length=64, unique=True)
     source_export_name = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -30,6 +31,13 @@ class ChatImport(models.Model):
 
     class Meta:
         db_table = "chats_import"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["chat", "source_hash"],
+                condition=~models.Q(source_hash=""),
+                name="uq_chats_import_chat_source_hash",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.source_file_name} ({self.imported_at:%Y-%m-%d %H:%M:%S})"
@@ -100,6 +108,7 @@ class ChatMessage(models.Model):
     raw_timestamp = models.CharField(max_length=30, blank=True)
     content = models.TextField(blank=True)
     raw_line = models.TextField(blank=True)
+    message_fingerprint = models.CharField(max_length=64)
     is_edited = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -109,7 +118,11 @@ class ChatMessage(models.Model):
             models.UniqueConstraint(
                 fields=["chat_import", "sequence_index"],
                 name="uq_chats_message_sequence_per_import",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["chat", "message_fingerprint"],
+                name="uq_chats_message_fingerprint_per_chat",
+            ),
         ]
         ordering = ["sequence_index"]
 
@@ -132,11 +145,24 @@ class ChatAttachment(models.Model):
     content_bytes = models.BinaryField(null=True, blank=True)
     content_size = models.PositiveBigIntegerField(default=0)
     sha256 = models.CharField(max_length=64, blank=True)
+    attachment_fingerprint = models.CharField(max_length=64, blank=True)
     caption = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "chats_attachment"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["message", "sha256"],
+                condition=~models.Q(sha256=""),
+                name="uq_chats_attachment_sha256_per_message",
+            ),
+            models.UniqueConstraint(
+                fields=["message", "attachment_fingerprint"],
+                condition=~models.Q(attachment_fingerprint=""),
+                name="uq_chats_attachment_fp_per_message",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.file_name} ({self.content_size} bytes)"
