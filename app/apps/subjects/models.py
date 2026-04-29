@@ -3,6 +3,8 @@ from django.db import models
 
 
 class Subject(models.Model):
+    """Represents a person or entity monitored in an investigation context."""
+
     full_name = models.CharField(max_length=255)
     alias = models.CharField(max_length=120, blank=True)
     tax_id = models.CharField(max_length=18, unique=True)
@@ -19,6 +21,8 @@ class Subject(models.Model):
 
 
 class Relationship(models.Model):
+    """Stores directed links between two subjects and their relationship strength."""
+
     class RelationshipType(models.TextChoices):
         FAMILY = "Family", "Family"
         BUSINESS_PARTNER = "BusinessPartner", "Business Partner"
