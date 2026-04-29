@@ -43,6 +43,14 @@ def _normalized(value: str) -> str:
     return " ".join(value.strip().lower().split())
 
 
+def _normalize_attachment_name(value: str) -> str:
+    invisible_chars = ["\u200e", "\u200f", "\u202a", "\u202b", "\u202c", "\ufeff"]
+    cleaned = value
+    for char in invisible_chars:
+        cleaned = cleaned.replace(char, "")
+    return cleaned.strip()
+
+
 def _digits_only(value: str) -> str:
     return "".join(ch for ch in value if ch.isdigit())
 
@@ -168,8 +176,15 @@ def parse_whatsapp_export_lines(lines: Iterable[str]) -> list[ParsedMessage]:
 def import_whatsapp_chat_zip(zip_path: str | Path) -> ChatImport:
     zip_file_path = Path(zip_path)
     with ZipFile(zip_file_path, "r") as archive:
+        archive_names = archive.namelist()
+        attachment_index: dict[str, str] = {}
+        for archive_name in archive_names:
+            normalized_name = _normalize_attachment_name(archive_name)
+            attachment_index[normalized_name] = archive_name
+            attachment_index[_normalize_attachment_name(Path(archive_name).name)] = archive_name
+
         text_name = next(
-            (name for name in archive.namelist() if name.lower().endswith(".txt")),
+            (name for name in archive_names if name.lower().endswith(".txt")),
             None,
         )
         if text_name is None:
@@ -260,31 +275,32 @@ def import_whatsapp_chat_zip(zip_path: str | Path) -> ChatImport:
                         == ChatMessage.MessageType.EDITED,
                     },
                 )
-                if not created:
-                    continue
 
                 attachment_match = ATTACHMENT_PLACEHOLDER_RE.match(parsed.content)
                 if not attachment_match:
                     continue
 
-                attachment_name = attachment_match.group("file_name").strip()
-                if attachment_name not in archive.namelist():
+                attachment_name = _normalize_attachment_name(
+                    attachment_match.group("file_name")
+                )
+                archive_attachment_name = attachment_index.get(attachment_name)
+                if archive_attachment_name is None:
                     continue
 
-                content_bytes = archive.read(attachment_name)
+                content_bytes = archive.read(archive_attachment_name)
                 content_hash = _sha256(content_bytes)
                 attachment_fingerprint = build_attachment_fingerprint(
                     file_name=attachment_name,
                     content_hash=content_hash,
                 )
-                mime_type, _ = mimetypes.guess_type(attachment_name)
-                suffix = Path(attachment_name).suffix.lstrip(".").lower()
+                mime_type, _ = mimetypes.guess_type(archive_attachment_name)
+                suffix = Path(archive_attachment_name).suffix.lstrip(".").lower()
 
                 ChatAttachment.objects.get_or_create(
                     message=message,
                     attachment_fingerprint=attachment_fingerprint,
                     defaults={
-                        "file_name": attachment_name,
+                        "file_name": Path(archive_attachment_name).name,
                         "mime_type": mime_type or "",
                         "file_extension": suffix,
                         "content_bytes": content_bytes,

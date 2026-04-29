@@ -93,6 +93,32 @@
             border-radius: 10px;
             padding: 10px 12px;
         }
+        .chat-view {
+            margin-top: 16px;
+            border: 1px solid #2a3d63;
+            background: #101a2d;
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .chat-view h3 { margin: 0 0 8px; }
+        .chat-stream {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 420px;
+            overflow: auto;
+            padding-right: 6px;
+        }
+        .bubble {
+            max-width: 78%;
+            border-radius: 12px;
+            padding: 8px 10px;
+            border: 1px solid #2d446f;
+            background: #162746;
+        }
+        .bubble.self { margin-left: auto; background: #1e3a6a; }
+        .bubble .who { font-size: 12px; color: #9bb2d7; margin-bottom: 4px; }
+        .bubble .when { font-size: 11px; color: #8aa0c4; margin-top: 4px; }
         .loading { opacity: 0.75; }
         .ok { color: var(--ok); }
         .error { color: var(--error); }
@@ -159,6 +185,11 @@
         </div>
 
         <p class="status" id="status">Carregando dados...</p>
+        <section class="chat-view">
+            <h3 id="chat-title">Conversa selecionada</h3>
+            <div class="meta" id="chat-meta">Clique em uma thread para visualizar como chat.</div>
+            <div class="chat-stream" id="chat-stream"></div>
+        </section>
     </div>
 
     <script>
@@ -186,7 +217,63 @@
             const label = escapeHtml(previewItem(item));
             if (!item.id) return `<li>${label}</li>`;
             const detailUrl = `${endpoint}${item.id}/`;
+            if (endpoint === "/api/chats/threads/") {
+                const title = escapeHtml(item.title || `Thread ${item.id}`);
+                return `<li><a href="#" class="open-chat" data-chat-id="${item.id}" data-chat-title="${title}">${label}</a> · <a href="${detailUrl}" target="_blank" rel="noopener noreferrer">detalhe</a></li>`;
+            }
             return `<li><a href="${detailUrl}" target="_blank" rel="noopener noreferrer">${label}</a></li>`;
+        }
+
+        async function openChat(chatId, chatTitle) {
+            const stream = document.getElementById("chat-stream");
+            const titleNode = document.getElementById("chat-title");
+            const metaNode = document.getElementById("chat-meta");
+            stream.innerHTML = "<div>Carregando mensagens...</div>";
+            titleNode.textContent = `Conversa: ${chatTitle}`;
+
+            try {
+                const [messagesRes, participantsRes] = await Promise.all([
+                    fetch(`/api/chats/messages/?chat=${chatId}`),
+                    fetch(`/api/chats/participants/?chat=${chatId}`),
+                ]);
+                if (!messagesRes.ok || !participantsRes.ok) {
+                    throw new Error("Falha ao carregar dados da conversa.");
+                }
+                const messagesData = await messagesRes.json();
+                const participantsData = await participantsRes.json();
+                const messages = Array.isArray(messagesData) ? messagesData : (messagesData.results || []);
+                const participants = Array.isArray(participantsData) ? participantsData : (participantsData.results || []);
+
+                const participantsById = {};
+                participants.forEach((p) => { participantsById[p.id] = p; });
+
+                if (!messages.length) {
+                    stream.innerHTML = "<div>Sem mensagens para esta conversa.</div>";
+                    metaNode.textContent = `chat_id=${chatId} | 0 mensagens`;
+                    return;
+                }
+
+                stream.innerHTML = messages.slice(-200).map((message) => {
+                    const sender = participantsById[message.sender];
+                    const senderName = sender ? sender.display_name : "Sistema";
+                    const content = escapeHtml(message.content || `[${message.message_type}]`);
+                    const sentAt = escapeHtml(message.sent_at || message.raw_timestamp || "");
+                    const isSelf = sender && sender.is_self;
+                    const bubbleClass = isSelf ? "bubble self" : "bubble";
+                    return `
+                        <div class="${bubbleClass}">
+                            <div class="who">${escapeHtml(senderName)}</div>
+                            <div>${content.replaceAll("\n", "<br>")}</div>
+                            <div class="when">${sentAt}</div>
+                        </div>
+                    `;
+                }).join("");
+                metaNode.textContent = `chat_id=${chatId} | ${messages.length} mensagens`;
+                stream.scrollTop = stream.scrollHeight;
+            } catch (error) {
+                stream.innerHTML = `<div>Erro: ${escapeHtml(error.message)}</div>`;
+                metaNode.textContent = "Falha ao carregar conversa.";
+            }
         }
 
         async function loadCard(card) {
@@ -251,6 +338,12 @@
         });
 
         document.getElementById("refresh-all").addEventListener("click", loadAll);
+        document.addEventListener("click", (event) => {
+            const target = event.target.closest(".open-chat");
+            if (!target) return;
+            event.preventDefault();
+            openChat(target.dataset.chatId, target.dataset.chatTitle);
+        });
         loadAll();
     </script>
 </body>
