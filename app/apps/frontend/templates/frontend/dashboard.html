@@ -64,6 +64,18 @@
         }
         button:hover { background: #1b356a; transform: translateY(-1px); }
         button.secondary { background: transparent; border-color: #34548e; color: #b8c9e8; }
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #34548e;
+            border-radius: 8px;
+            padding: 7px 10px;
+            color: #d6e3ff;
+            text-decoration: none;
+            font-weight: 600;
+            background: transparent;
+        }
+        .link-btn:hover { background: #1b356a; }
         ul {
             margin: 0;
             padding-left: 18px;
@@ -105,43 +117,43 @@
         <div class="grid">
             <section class="card" data-endpoint="/api/subjects/subjects/" data-title="Subjects">
                 <div class="card-head"><h2>Subjects</h2><span class="badge">-</span></div>
-                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button><a class="link-btn" href="/api/subjects/subjects/" target="_blank" rel="noopener noreferrer">Abrir endpoint</a></div>
                 <ul></ul>
             </section>
 
             <section class="card" data-endpoint="/api/subjects/relationships/" data-title="Relationships">
                 <div class="card-head"><h2>Relationships</h2><span class="badge">-</span></div>
-                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button><a class="link-btn" href="/api/subjects/relationships/" target="_blank" rel="noopener noreferrer">Abrir endpoint</a></div>
                 <ul></ul>
             </section>
 
             <section class="card" data-endpoint="/api/chats/threads/" data-title="Chat Threads">
                 <div class="card-head"><h2>Chat Threads</h2><span class="badge">-</span></div>
-                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button><a class="link-btn" href="/api/chats/threads/" target="_blank" rel="noopener noreferrer">Abrir endpoint</a></div>
                 <ul></ul>
             </section>
 
             <section class="card" data-endpoint="/api/chats/imports/" data-title="Chat Imports">
                 <div class="card-head"><h2>Chat Imports</h2><span class="badge">-</span></div>
-                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button><a class="link-btn" href="/api/chats/imports/" target="_blank" rel="noopener noreferrer">Abrir endpoint</a></div>
                 <ul></ul>
             </section>
 
             <section class="card" data-endpoint="/api/chats/participants/" data-title="Chat Participants">
                 <div class="card-head"><h2>Chat Participants</h2><span class="badge">-</span></div>
-                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button><a class="link-btn" href="/api/chats/participants/" target="_blank" rel="noopener noreferrer">Abrir endpoint</a></div>
                 <ul></ul>
             </section>
 
             <section class="card" data-endpoint="/api/chats/messages/" data-title="Chat Messages">
                 <div class="card-head"><h2>Chat Messages</h2><span class="badge">-</span></div>
-                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button><a class="link-btn" href="/api/chats/messages/" target="_blank" rel="noopener noreferrer">Abrir endpoint</a></div>
                 <ul></ul>
             </section>
 
             <section class="card" data-endpoint="/api/chats/attachments/" data-title="Chat Attachments">
                 <div class="card-head"><h2>Chat Attachments</h2><span class="badge">-</span></div>
-                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button><a class="link-btn" href="/api/chats/attachments/" target="_blank" rel="noopener noreferrer">Abrir endpoint</a></div>
                 <ul></ul>
             </section>
         </div>
@@ -150,6 +162,15 @@
     </div>
 
     <script>
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
         function previewItem(item) {
             if (item.full_name) return `${item.id} - ${item.full_name}`;
             if (item.relationship_type) return `${item.id} - ${item.relationship_type} (${item.from_subject} -> ${item.to_subject})`;
@@ -159,6 +180,13 @@
             if (item.content) return `${item.id} - ${String(item.content).slice(0, 80)}`;
             if (item.file_name) return `${item.id} - ${item.file_name}`;
             return JSON.stringify(item).slice(0, 90);
+        }
+
+        function itemToHtml(item, endpoint) {
+            const label = escapeHtml(previewItem(item));
+            if (!item.id) return `<li>${label}</li>`;
+            const detailUrl = `${endpoint}${item.id}/`;
+            return `<li><a href="${detailUrl}" target="_blank" rel="noopener noreferrer">${label}</a></li>`;
         }
 
         async function loadCard(card) {
@@ -185,7 +213,7 @@
                 }
 
                 const top = items.slice(0, 25);
-                list.innerHTML = top.map((item) => `<li>${previewItem(item)}</li>`).join("");
+                list.innerHTML = top.map((item) => itemToHtml(item, endpoint)).join("");
                 card.classList.remove("loading");
                 return `${title}: ${items.length}`;
             } catch (error) {
