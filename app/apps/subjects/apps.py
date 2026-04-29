@@ -2,4 +2,5 @@ from django.apps import AppConfig
 
 
 class SubjectsConfig(AppConfig):
-    name = 'subjects'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.subjects"
