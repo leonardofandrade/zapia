@@ -1,0 +1,47 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Chat - {{ chat.title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>{{ chat.title }}</h1>
+    <p class="meta">Conversa renderizada em formato semelhante ao WhatsApp (POC).</p>
+</div>
+
+<div class="card">
+    <h2>Mensagens</h2>
+    {% for message in messages %}
+        <div class="chat-bubble {% if message.sender and message.sender.is_self %}self{% endif %}">
+            <div class="meta">
+                {% if message.sender %}{{ message.sender.display_name }}{% else %}Sistema{% endif %}
+                - {{ message.sent_at|default:message.raw_timestamp }}
+            </div>
+            <div>{{ message.content|linebreaksbr }}</div>
+            {% if message.attachments.all %}
+                {% for attachment in message.attachments.all %}
+                    <div class="attachment">
+                        📎 {{ attachment.file_name }}
+                        <a href="/api/chats/attachments/{{ attachment.id }}/content/" target="_blank">abrir</a>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% empty %}
+        <p>Sem mensagens para esta conversa.</p>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h2>Anexos</h2>
+    <ul class="list">
+        {% for attachment in attachments %}
+            <li>
+                {{ attachment.file_name }} ({{ attachment.content_size }} bytes)
+                - <a href="/api/chats/attachments/{{ attachment.id }}/content/" target="_blank">abrir</a>
+            </li>
+        {% empty %}
+            <li>Sem anexos.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Subjects - Zapia{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Subjects</h1>
+    <p class="meta">Listagem de investigados e vínculos.</p>
+    <ul class="list">
+        {% for subject in subjects %}
+            <li>
+                {{ subject.full_name }} ({{ subject.tax_id }})
+                {% if subject.under_investigation %}- sob investigação{% endif %}
+            </li>
+        {% empty %}
+            <li>Sem subjects cadastrados.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="card">
+    <h2>Relationships</h2>
+    <ul class="list">
+        {% for relationship in relationships %}
+            <li>
+                {{ relationship.from_subject.full_name }} -> {{ relationship.to_subject.full_name }}
+                ({{ relationship.relationship_type }}, força {{ relationship.strength }})
+            </li>
+        {% empty %}
+            <li>Sem vínculos cadastrados.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

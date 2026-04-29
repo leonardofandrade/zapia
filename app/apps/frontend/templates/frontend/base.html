@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Zapia{% endblock %}</title>
+    <style>
+        body { font-family: Inter, Segoe UI, Arial, sans-serif; margin: 0; background: #0b1220; color: #e6edf8; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .nav { display: flex; gap: 12px; margin-bottom: 20px; }
+        .nav a { color: #cfe0ff; text-decoration: none; border: 1px solid #31486f; border-radius: 8px; padding: 6px 10px; }
+        .nav a:hover { background: #1a2c4a; }
+        .card { background: #131d31; border: 1px solid #23324d; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+        .list { margin: 0; padding-left: 18px; }
+        .meta { color: #93a6c7; font-size: 13px; }
+        .chat-bubble { background: #1b2a45; border: 1px solid #2f4469; border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; max-width: 75%; }
+        .chat-bubble.self { margin-left: auto; background: #1f3d6b; }
+        .attachment { font-size: 13px; color: #b8c9e8; margin-top: 6px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/subjects/">Subjects</a>
+            <a href="/chats/">Chats</a>
+        </nav>
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

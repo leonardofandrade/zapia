@@ -1,0 +1,20 @@
+{% extends "frontend/base.html" %}
+
+{% block title %}Chats - Zapia{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Chats Processados</h1>
+    <p class="meta">Clique para abrir a conversa.</p>
+    <ul class="list">
+        {% for thread in threads %}
+            <li>
+                <a href="/chats/{{ thread.id }}/">{{ thread.title }}</a>
+                <span class="meta"> - {{ thread.created_at }}</span>
+            </li>
+        {% empty %}
+            <li>Sem chats processados.</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
