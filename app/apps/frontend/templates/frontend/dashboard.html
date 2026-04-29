@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zapia POC - Data Console</title>
+    <style>
+        :root {
+            --bg: #0b1220;
+            --panel: #121a2b;
+            --panel-border: #23324d;
+            --text: #e5ecf6;
+            --muted: #8fa0bc;
+            --accent: #4f8cff;
+            --accent-soft: #213d77;
+            --ok: #2ebf91;
+            --error: #ff6b6b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Inter, Segoe UI, Arial, sans-serif;
+            margin: 0;
+            background: radial-gradient(circle at top, #111c33, var(--bg) 40%);
+            color: var(--text);
+        }
+        .container { max-width: 1280px; margin: 0 auto; padding: 28px; }
+        .header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 18px; }
+        h1 { margin: 0; font-size: 28px; letter-spacing: 0.2px; }
+        .meta { color: var(--muted); margin: 6px 0 0; }
+        .toolbar { display: flex; gap: 8px; }
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .card {
+            background: linear-gradient(180deg, #131d31, var(--panel));
+            border: 1px solid var(--panel-border);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card h2 { margin: 0; font-size: 16px; font-weight: 600; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 30px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid #33508a;
+            background: #162b55;
+            color: #c4d5fb;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .actions { display: flex; gap: 8px; margin-bottom: 10px; }
+        button {
+            border: 1px solid #34548e;
+            border-radius: 8px;
+            padding: 7px 10px;
+            background: #162b55;
+            color: #d6e3ff;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.15s ease;
+        }
+        button:hover { background: #1b356a; transform: translateY(-1px); }
+        button.secondary { background: transparent; border-color: #34548e; color: #b8c9e8; }
+        ul {
+            margin: 0;
+            padding-left: 18px;
+            max-height: 260px;
+            overflow: auto;
+            color: #d8e2f5;
+        }
+        li { margin-bottom: 7px; }
+        code { background: #10213f; padding: 2px 6px; border-radius: 5px; color: #b9cfff; }
+        .status {
+            margin-top: 16px;
+            color: #b8c9e8;
+            border: 1px solid #2a3d63;
+            background: #101a2d;
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .loading { opacity: 0.75; }
+        .ok { color: var(--ok); }
+        .error { color: var(--error); }
+        @media (max-width: 900px) {
+            .grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Zapia Data Console</h1>
+                <p class="meta">POC de monitoramento consumindo APIs DRF de <code>subjects</code> e <code>chats</code>.</p>
+            </div>
+            <div class="toolbar">
+                <button id="refresh-all">Atualizar tudo</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <section class="card" data-endpoint="/api/subjects/subjects/" data-title="Subjects">
+                <div class="card-head"><h2>Subjects</h2><span class="badge">-</span></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <ul></ul>
+            </section>
+
+            <section class="card" data-endpoint="/api/subjects/relationships/" data-title="Relationships">
+                <div class="card-head"><h2>Relationships</h2><span class="badge">-</span></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <ul></ul>
+            </section>
+
+            <section class="card" data-endpoint="/api/chats/threads/" data-title="Chat Threads">
+                <div class="card-head"><h2>Chat Threads</h2><span class="badge">-</span></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <ul></ul>
+            </section>
+
+            <section class="card" data-endpoint="/api/chats/imports/" data-title="Chat Imports">
+                <div class="card-head"><h2>Chat Imports</h2><span class="badge">-</span></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <ul></ul>
+            </section>
+
+            <section class="card" data-endpoint="/api/chats/participants/" data-title="Chat Participants">
+                <div class="card-head"><h2>Chat Participants</h2><span class="badge">-</span></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <ul></ul>
+            </section>
+
+            <section class="card" data-endpoint="/api/chats/messages/" data-title="Chat Messages">
+                <div class="card-head"><h2>Chat Messages</h2><span class="badge">-</span></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <ul></ul>
+            </section>
+
+            <section class="card" data-endpoint="/api/chats/attachments/" data-title="Chat Attachments">
+                <div class="card-head"><h2>Chat Attachments</h2><span class="badge">-</span></div>
+                <div class="actions"><button>Atualizar</button><button class="secondary">Limpar</button></div>
+                <ul></ul>
+            </section>
+        </div>
+
+        <p class="status" id="status">Carregando dados...</p>
+    </div>
+
+    <script>
+        function previewItem(item) {
+            if (item.full_name) return `${item.id} - ${item.full_name}`;
+            if (item.relationship_type) return `${item.id} - ${item.relationship_type} (${item.from_subject} -> ${item.to_subject})`;
+            if (item.title) return `${item.id} - ${item.title}`;
+            if (item.source_file_name) return `${item.id} - ${item.source_file_name}`;
+            if (item.display_name) return `${item.id} - ${item.display_name}`;
+            if (item.content) return `${item.id} - ${String(item.content).slice(0, 80)}`;
+            if (item.file_name) return `${item.id} - ${item.file_name}`;
+            return JSON.stringify(item).slice(0, 90);
+        }
+
+        async function loadCard(card) {
+            const endpoint = card.dataset.endpoint;
+            const title = card.dataset.title;
+            const list = card.querySelector("ul");
+            const badge = card.querySelector(".badge");
+            card.classList.add("loading");
+            list.innerHTML = "<li>Carregando...</li>";
+
+            try {
+                const response = await fetch(endpoint);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                const items = Array.isArray(data) ? data : (data.results || []);
+                badge.textContent = String(items.length);
+
+                if (!items.length) {
+                    list.innerHTML = "<li>Sem registros.</li>";
+                    card.classList.remove("loading");
+                    return `${title}: 0`;
+                }
+
+                const top = items.slice(0, 25);
+                list.innerHTML = top.map((item) => `<li>${previewItem(item)}</li>`).join("");
+                card.classList.remove("loading");
+                return `${title}: ${items.length}`;
+            } catch (error) {
+                list.innerHTML = `<li>Erro ao carregar: ${error.message}</li>`;
+                badge.textContent = "!";
+                card.classList.remove("loading");
+                return `${title}: erro`;
+            }
+        }
+
+        async function loadAll() {
+            const cards = [...document.querySelectorAll(".card")];
+            const results = [];
+            for (const card of cards) {
+                const result = await loadCard(card);
+                results.push(result);
+            }
+            document.getElementById("status").innerHTML = `<span class="ok">Resumo:</span> ${results.join(" | ")}`;
+        }
+
+        document.querySelectorAll(".card").forEach((card) => {
+            const buttons = card.querySelectorAll("button");
+            const refreshButton = buttons[0];
+            const clearButton = buttons[1];
+
+            refreshButton.addEventListener("click", async () => {
+                const status = await loadCard(card);
+                document.getElementById("status").textContent = status;
+            });
+
+            clearButton.addEventListener("click", () => {
+                card.querySelector("ul").innerHTML = "<li>Limpo manualmente.</li>";
+                card.querySelector(".badge").textContent = "-";
+            });
+        });
+
+        document.getElementById("refresh-all").addEventListener("click", loadAll);
+        loadAll();
+    </script>
+</body>
+</html>
