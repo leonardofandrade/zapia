@@ -10,6 +10,7 @@ from typing import Iterable
 from zipfile import ZipFile
 
 from django.db import transaction
+from django.utils import timezone
 
 from .models import ChatAttachment, ChatImport, ChatMessage, ChatParticipant, ChatThread
 
@@ -76,7 +77,8 @@ def build_attachment_fingerprint(
 
 def _parse_sent_at(raw_timestamp: str) -> datetime | None:
     try:
-        return datetime.strptime(raw_timestamp, "%d/%m/%Y %H:%M")
+        parsed = datetime.strptime(raw_timestamp, "%d/%m/%Y %H:%M")
+        return timezone.make_aware(parsed, timezone.get_current_timezone())
     except ValueError:
         return None
 
