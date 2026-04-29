@@ -8,6 +8,17 @@
     <p class="meta">Conversa renderizada em formato semelhante ao WhatsApp (POC).</p>
 </div>
 
+<style>
+    .message-image {
+        margin-top: 8px;
+        max-width: 320px;
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid #2f4469;
+        display: block;
+    }
+</style>
+
 <div class="card">
     <h2>Mensagens</h2>
     {% for message in messages %}
@@ -23,6 +34,16 @@
                         📎 {{ attachment.file_name }}
                         <a href="/api/chats/attachments/{{ attachment.id }}/content/" target="_blank">abrir</a>
                     </div>
+                    {% if attachment.mime_type|slice:":6" == "image/" or attachment.file_extension == "jpg" or attachment.file_extension == "jpeg" or attachment.file_extension == "png" or attachment.file_extension == "gif" or attachment.file_extension == "webp" %}
+                        <a href="/api/chats/attachments/{{ attachment.id }}/content/" target="_blank">
+                            <img
+                                class="message-image"
+                                src="/api/chats/attachments/{{ attachment.id }}/content/"
+                                alt="{{ attachment.file_name }}"
+                                loading="lazy"
+                            >
+                        </a>
+                    {% endif %}
                 {% endfor %}
             {% endif %}
         </div>

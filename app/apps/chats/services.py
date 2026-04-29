@@ -22,6 +22,8 @@ MESSAGE_LINE_RE = re.compile(
 AUTHOR_MESSAGE_RE = re.compile(r"^(?P<author>[^:]+): (?P<content>.*)$")
 ATTACHMENT_PLACEHOLDER_RE = re.compile(r"^(?P<file_name>.+) \(arquivo anexado\)$")
 PHONE_RE = re.compile(r"^\+?\d[\d\s\-()]{7,}$")
+MEDIA_HIDDEN_TOKEN = "<Mídia oculta>"
+MEDIA_PREFIXES = ("IMG-", "VID-", "AUD-", "PTT-", "STK-", "DOC-")
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,46 @@ def _normalize_attachment_name(value: str) -> str:
     for char in invisible_chars:
         cleaned = cleaned.replace(char, "")
     return cleaned.strip()
+
+
+def _is_media_file(file_name: str) -> bool:
+    upper_name = Path(file_name).name.upper()
+    if upper_name.endswith(".TXT") or upper_name.endswith(".VCF"):
+        return False
+    return upper_name.startswith(MEDIA_PREFIXES)
+
+
+def _extract_message_date_key(raw_timestamp: str) -> str:
+    # Converts "14/04/2025 09:11" -> "20250414"
+    try:
+        parsed = datetime.strptime(raw_timestamp, "%d/%m/%Y %H:%M")
+        return parsed.strftime("%Y%m%d")
+    except ValueError:
+        return ""
+
+
+def _resolve_attachment_from_media_hidden(
+    *,
+    content: str,
+    raw_timestamp: str,
+    archive_names: list[str],
+    used_archive_names: set[str],
+) -> str | None:
+    first_line = content.splitlines()[0].strip() if content else ""
+    if first_line != MEDIA_HIDDEN_TOKEN:
+        return None
+
+    date_key = _extract_message_date_key(raw_timestamp)
+    candidates = [
+        name
+        for name in archive_names
+        if name not in used_archive_names and _is_media_file(name)
+    ]
+    if date_key:
+        dated_candidates = [name for name in candidates if date_key in Path(name).name]
+        if dated_candidates:
+            return dated_candidates[0]
+    return candidates[0] if candidates else None
 
 
 def _digits_only(value: str) -> str:
@@ -177,6 +219,7 @@ def import_whatsapp_chat_zip(zip_path: str | Path) -> ChatImport:
     zip_file_path = Path(zip_path)
     with ZipFile(zip_file_path, "r") as archive:
         archive_names = archive.namelist()
+        used_archive_names: set[str] = set()
         attachment_index: dict[str, str] = {}
         for archive_name in archive_names:
             normalized_name = _normalize_attachment_name(archive_name)
@@ -277,13 +320,27 @@ def import_whatsapp_chat_zip(zip_path: str | Path) -> ChatImport:
                 )
 
                 attachment_match = ATTACHMENT_PLACEHOLDER_RE.match(parsed.content)
-                if not attachment_match:
-                    continue
+                archive_attachment_name: str | None = None
+                attachment_name = ""
+                caption = ""
 
-                attachment_name = _normalize_attachment_name(
-                    attachment_match.group("file_name")
-                )
-                archive_attachment_name = attachment_index.get(attachment_name)
+                if attachment_match:
+                    attachment_name = _normalize_attachment_name(
+                        attachment_match.group("file_name")
+                    )
+                    archive_attachment_name = attachment_index.get(attachment_name)
+                else:
+                    archive_attachment_name = _resolve_attachment_from_media_hidden(
+                        content=parsed.content,
+                        raw_timestamp=parsed.raw_timestamp,
+                        archive_names=archive_names,
+                        used_archive_names=used_archive_names,
+                    )
+                    if archive_attachment_name:
+                        attachment_name = Path(archive_attachment_name).name
+                        lines = parsed.content.splitlines()
+                        caption = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
+
                 if archive_attachment_name is None:
                     continue
 
@@ -292,6 +349,7 @@ def import_whatsapp_chat_zip(zip_path: str | Path) -> ChatImport:
                 attachment_fingerprint = build_attachment_fingerprint(
                     file_name=attachment_name,
                     content_hash=content_hash,
+                    caption=caption,
                 )
                 mime_type, _ = mimetypes.guess_type(archive_attachment_name)
                 suffix = Path(archive_attachment_name).suffix.lstrip(".").lower()
@@ -306,7 +364,9 @@ def import_whatsapp_chat_zip(zip_path: str | Path) -> ChatImport:
                         "content_bytes": content_bytes,
                         "content_size": len(content_bytes),
                         "sha256": content_hash,
+                        "caption": caption,
                     },
                 )
+                used_archive_names.add(archive_attachment_name)
 
     return chat_import
